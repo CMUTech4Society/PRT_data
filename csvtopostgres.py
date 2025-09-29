@@ -14,6 +14,24 @@ db_password = os.getenv("DB_PASSWORD")
 db_host = os.getenv("DB_HOST")
 db_port = os.getenv("DB_PORT")
 
+# create database name if it doesn't exist yet
+conn = psycopg2.connect(
+    dbname="postgres",
+    user=db_user,
+    password=db_password,
+    host=db_host,
+    port=db_port
+)
+conn.autocommit = True
+cur = conn.cursor()
+cur.execute(f"SELECT 1 FROM pg_catalog.pg_database WHERE datname = '{db_name}'")
+exists = cur.fetchone()
+if not exists:
+    cur.execute(f"CREATE DATABASE {db_name}")
+    print(f"Database {db_name} created.")
+cur.close()
+conn.close()
+
 # --- Connect to PostgreSQL ---
 conn = psycopg2.connect(
     dbname=db_name,
