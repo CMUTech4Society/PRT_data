@@ -26,9 +26,10 @@ conn.autocommit = True
 cur = conn.cursor()
 cur.execute(f"SELECT 1 FROM pg_catalog.pg_database WHERE datname = '{db_name}'")
 exists = cur.fetchone()
-if not exists:
-    cur.execute(f"CREATE DATABASE {db_name}")
-    print(f"Database {db_name} created.")
+if exists:
+    cur.execute(f"DROP DATABASE {db_name}")
+cur.execute(f"CREATE DATABASE {db_name}")
+print(f"Database {db_name} created.")
 cur.close()
 conn.close()
 
