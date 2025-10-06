@@ -14,7 +14,7 @@ db_password = os.getenv("DB_PASSWORD")
 db_host = os.getenv("DB_HOST")
 db_port = os.getenv("DB_PORT")
 
-# create database name if it doesn't exist yet
+# ---- Create database if not exists (recreate if it does) ----
 conn = psycopg2.connect(
     dbname="postgres",
     user=db_user,
@@ -22,18 +22,22 @@ conn = psycopg2.connect(
     host=db_host,
     port=db_port
 )
+
 conn.autocommit = True
 cur = conn.cursor()
+
 cur.execute(f"SELECT 1 FROM pg_catalog.pg_database WHERE datname = '{db_name}'")
 exists = cur.fetchone()
 if exists:
     cur.execute(f"DROP DATABASE {db_name}")
+    print(f"Database {db_name} dropped.")
 cur.execute(f"CREATE DATABASE {db_name}")
 print(f"Database {db_name} created.")
+
 cur.close()
 conn.close()
 
-# --- Connect to PostgreSQL ---
+# ---- Connect to PostgreSQL ----
 conn = psycopg2.connect(
     dbname=db_name,
     user=db_user,
@@ -48,12 +52,11 @@ csv_files = glob.glob("*.csv")
 for csv_path in csv_files:
     filename = os.path.splitext(os.path.basename(csv_path))[0]
 
-    # --- Read CSV ---
+    # ---- Read CSV ----
     df = pd.read_csv(csv_path)
     df.rename({df.columns[0]: 'Department'}, inplace=True)
 
-    # --- Clean Data ---
-    # TODO: use regex to match if its a dollar symbol, then clean that data as well
+    # ---- Clean Data ----
     df = df.fillna("0")
     for i in range(2006, 2024):
         df[str(i)] = df[str(i)].map(lambda x: str(x).replace('$', '').replace(',', '')).map(lambda x: int(x) if x.replace('-', '').isdigit() else 0)
@@ -63,9 +66,7 @@ for csv_path in csv_files:
                       var_name="year",
                       value_name="value")
 
-    print("Adding", filename, "table")
-
-    # --- Create table ---
+    # ---- Create table ----
     cur.execute(f"""
         CREATE TABLE IF NOT EXISTS {filename} (
             id SERIAL PRIMARY KEY,
@@ -75,7 +76,7 @@ for csv_path in csv_files:
         )
     """)
 
-    # --- Insert rows ---
+    # ---- Insert rows ----
     for _, row in df_long.iterrows():
         cur.execute(f"""
             INSERT INTO {filename} (department, year, value)
@@ -83,7 +84,7 @@ for csv_path in csv_files:
         """, (row["Department"], int(row["year"]), row["value"]))
     print("Added", filename, "to database")
 
-# Commit + close
+# ---- Commit & Close connection ----
 conn.commit()
 cur.close()
 conn.close()
